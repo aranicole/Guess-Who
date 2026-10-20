@@ -55,6 +55,7 @@ textarea{font:inherit;font-size:18px;border:3px solid var(--line);border-radius:
   <h1>Guess Who?</h1>
   <div class="mas" id="mas"></div>
   <p style="text-align:center">Look at the clues, then draw the character. Can your friends guess who it is?</p>
+  <button class="btn ok" id="cont" style="display:none" onclick="resume()">▶ Continue game</button>
   <button class="btn pri" onclick="show('setup')">Play</button>
   <button class="btn ghost" onclick="show('add')">Add a character</button>
 </section>
@@ -111,6 +112,14 @@ textarea{font:inherit;font-size:18px;border:3px solid var(--line);border-radius:
 let C=[];
 let chars=[...C],players=[],scores={},turn=0,deck=[],cur=null,uid=0,mode='order',bag=[];
 try{const sv=JSON.parse(localStorage.getItem('gw_custom')||'[]');if(Array.isArray(sv))chars.push(...sv)}catch(_){}
+function loadState(){try{return JSON.parse(localStorage.getItem('gw_state')||'null')}catch(_){return null}}
+function save(){
+  const o=cur?null:loadState();
+  try{localStorage.setItem('gw_state',JSON.stringify({players,scores,turn,mode,bag,cur:cur?cur.n:(o&&o.cur)||null,deck:cur?deck.map(c=>c.n):(o&&o.deck)||[]}))}catch(_){}
+}
+{const s=loadState();
+ if(s&&Array.isArray(s.players)){players=s.players;scores=s.scores||{};turn=s.turn||0;mode=s.mode==='random'?'random':'order';bag=Array.isArray(s.bag)?s.bag:[];
+  players.forEach(p=>{if(typeof scores[p]!=='number')scores[p]=0});if(turn>=players.length)turn=0}}
 const $=id=>document.getElementById(id);
 const e=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 /* ---- every character is a name, a picture and a list of clues ---- */
@@ -123,20 +132,27 @@ function show(id){
   window.scrollTo(0,0);
   if(id==='home')mascots();if(id==='setup')renderP();if(id==='score')renderScores();if(id==='add')renderMine();
 }
-function mascots(){$('mas').innerHTML=chars.length?shuffle([...chars]).slice(0,4).map(draw).join(''):'<p style="text-align:center;width:100%">No characters yet. Tap “Add a character” to begin!</p>'}
+function canResume(){const s=loadState();return !!(s&&s.cur&&players.length&&chars.some(c=>c.n===s.cur))}
+function resume(){
+  const s=loadState();if(!canResume()){show('setup');return}
+  const by=n=>chars.find(c=>c.n===n);
+  cur=by(s.cur);deck=(s.deck||[]).map(by).filter(Boolean);
+  show('play');showCur();
+}
+function mascots(){$('cont').style.display=canResume()?'':'none';$('mas').innerHTML=chars.length?shuffle([...chars]).slice(0,4).map(draw).join(''):'<p style="text-align:center;width:100%">No characters yet. Tap “Add a character” to begin!</p>'}
 function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 
 /* ---- players ---- */
-function addP(){const n=$('pn').value.trim();if(!n||players.includes(n))return;players.push(n);scores[n]=0;bag=[];$('pn').value='';renderP()}
+function addP(){const n=$('pn').value.trim();if(!n||players.includes(n))return;players.push(n);scores[n]=0;bag=[];$('pn').value='';renderP();save()}
 $('pn').addEventListener('keydown',ev=>{if(ev.key==='Enter')addP()});
-function delP(i){delete scores[players[i]];players.splice(i,1);bag=[];turn=0;renderP()}
+function delP(i){delete scores[players[i]];players.splice(i,1);bag=[];turn=0;renderP();save()}
 function renderP(){
   $('plist').innerHTML=players.map((p,i)=>`<li>${e(p)}<button class="x" onclick="delP(${i})" aria-label="Remove">✕</button></li>`).join('');
   $('go').disabled=!players.length;paintMode();
 }
 
 /* ---- turn order: in order, or random (everyone goes once per round) ---- */
-function setMode(m){mode=m;bag=[];paintMode()}
+function setMode(m){mode=m;bag=[];paintMode();save()}
 function paintMode(){
   $('m_order').className='btn'+(mode==='order'?'':' ghost');
   $('m_random').className='btn'+(mode==='random'?'':' ghost');
@@ -147,7 +163,7 @@ function advanceTurn(){
   if(!bag.length){bag=shuffle(players.map((_,i)=>i));if(players.length>1&&bag[bag.length-1]===turn)bag.unshift(bag.pop())}
   turn=bag.pop();
 }
-function renderWho(){const p=players[turn];$('who').textContent=p+' · '+scores[p]+' pts';$('rb').style.display=players.length>1?'':'none'}
+function renderWho(){save();const p=players[turn];$('who').textContent=p+' · '+scores[p]+' pts';$('rb').style.display=players.length>1?'':'none'}
 function randomPlayer(){
   if(players.length<2)return;
   let i;do{i=Math.floor(Math.random()*players.length)}while(i===turn);
@@ -164,6 +180,9 @@ function nextChar(){
   if(!chars.length){show('add');return}
   if(!deck.length){deck=shuffle([...chars]);if(deck.length>1&&deck[deck.length-1]===cur)deck.unshift(deck.pop())}
   cur=deck.pop();
+  showCur();
+}
+function showCur(){
   renderWho();
   $('cname').textContent=cur.n;$('cser').textContent=cur.s||'';
   {const cl=clues(cur);$('clist').innerHTML=cl.length?cl.map(x=>`<li>${e(x)}</li>`).join(''):'<li style="list-style:none;margin-left:-22px">No clues this time. Just draw it!</li>'}
@@ -263,6 +282,7 @@ fetch('characters.json').then(r=>r.json()).then(list=>{
   chars=[...C,...custom().filter(x=>!seen.has(norm(x.n)))];deck=[];mascots();renderMine();
 }).catch(()=>{});
 mascots();
+if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
