@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Guess Who</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="theme-color" content="#ff6b6b">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Guess Who">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#fff3c4;--ink:#2b2350;--card:#fff;--pri:#ff6b6b;--ok:#22a861;--blue:#3d7bf0;--line:#2b2350;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1d1a3a;--ink:#fff5d6;--card:#2e2a5c;--line:#fff5d6}}
+:root[data-theme="dark"]{--bg:#1d1a3a;--ink:#fff5d6;--card:#2e2a5c;--line:#fff5d6}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Fredoka,system-ui,sans-serif}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+.app{max-width:480px;margin:auto;padding:16px}
+.s{display:none}.s.on{display:block}
+h1{font-size:52px;margin:8px 0;text-align:center;color:var(--pri);-webkit-text-stroke:2px var(--line);paint-order:stroke fill}
+h2{text-align:center;margin:4px 0 12px}
+.btn{font:inherit;font-weight:700;font-size:20px;min-height:52px;border:3px solid var(--line);border-radius:18px;padding:0 18px;background:var(--blue);color:#fff;box-shadow:0 4px 0 var(--line);cursor:pointer;width:100%;margin:8px 0}
+.btn.ok{background:var(--ok)}.btn.pri{background:var(--pri)}.btn.ghost{background:var(--card);color:var(--ink)}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--line)}.btn:disabled{opacity:.5}
+.row{display:flex;gap:10px}.row .btn{flex:1}
+input,select{font:inherit;font-size:18px;min-height:48px;border:3px solid var(--line);border-radius:14px;padding:0 12px;background:var(--card);color:var(--ink);width:100%;box-sizing:border-box}
+.list{list-style:none;padding:0;margin:8px 0}
+.list li{display:flex;justify-content:space-between;align-items:center;background:var(--card);border:3px solid var(--line);border-radius:14px;padding:10px 14px;margin:6px 0;font-size:20px}
+.list li.me{background:#ffe27a;color:#2b2350}
+.x{border:0;background:none;font-size:22px;color:var(--pri);cursor:pointer}
+.who{text-align:center;font-size:22px;font-weight:700}
+.flip{perspective:900px;height:190px;cursor:pointer;margin:10px 0}
+.in{position:relative;width:100%;height:100%;transition:transform .6s;transform-style:preserve-3d}
+.flip.f .in{transform:rotateY(180deg)}
+.face{position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;border:3px solid var(--line);border-radius:26px;background:var(--card);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px;overflow:auto;box-sizing:border-box;text-align:center}
+.face b{font-size:36px}.face small{opacity:.7;font-size:16px}.hint{font-size:14px;opacity:.6}
+.back{transform:rotateY(180deg);background:#ffe27a;color:#2b2350;align-items:flex-start;justify-content:flex-start}
+.back h3{margin:0 0 4px;font-size:22px}.back ol{margin:0;padding-left:24px;font-size:18px;text-align:left}
+.pic{border:3px solid var(--line);border-radius:26px;background:#cfeeff;display:flex;justify-content:center;padding:8px}
+.pic svg{width:100%;max-width:280px;height:auto}
+.mas{display:flex;gap:6px;margin:10px 0}.mas svg,.mas img{width:25%;background:#cfeeff;border:3px solid var(--line);border-radius:20px;object-fit:contain;aspect-ratio:3/4;box-sizing:border-box}
+textarea{font:inherit;font-size:18px;border:3px solid var(--line);border-radius:14px;padding:10px 12px;background:var(--card);color:var(--ink);width:100%;box-sizing:border-box;margin:8px 0}
+.drop{display:flex;align-items:center;justify-content:center;text-align:center;min-height:90px;margin:8px 0;padding:10px;border:3px dashed var(--line);border-radius:18px;background:var(--card);cursor:pointer;font-weight:700}.drop.over{background:#ffe27a;color:#2b2350}
+.pic img{width:100%;max-width:280px;max-height:320px;object-fit:contain;border-radius:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}.grid label{font-size:14px}
+</style>
+</head>
+<body>
+<div class="app">
+
+<section class="s on" id="home">
+  <h1>Guess Who?</h1>
+  <div class="mas" id="mas"></div>
+  <p style="text-align:center">Look at the clues, then draw the character. Can your friends guess who it is?</p>
+  <button class="btn pri" onclick="show('setup')">Play</button>
+  <button class="btn ghost" onclick="show('add')">Add a character</button>
+</section>
+
+<section class="s" id="setup">
+  <h2>Who’s playing?</h2>
+  <div class="row"><input id="pn" placeholder="Player name" maxlength="14"><button class="btn" style="width:90px" onclick="addP()">Add</button></div>
+  <ul class="list" id="plist"></ul>
+  <h3 style="margin:14px 0 0;text-align:center">Who goes next?</h3>
+  <div class="row"><button class="btn" id="m_order" onclick="setMode('order')">In order</button><button class="btn ghost" id="m_random" onclick="setMode('random')">🎲 Random</button></div>
+  <p id="mnote" style="text-align:center;font-size:15px;margin:0 0 6px"></p>
+  <button class="btn ok" id="go" onclick="newGame()">Start game</button>
+  <button class="btn ghost" onclick="show('home')">Back</button>
+</section>
+
+<section class="s" id="play">
+  <div class="who" id="who"></div>
+  <div class="flip" id="flip" onclick="this.classList.toggle('f')"><div class="in">
+    <div class="face"><b id="cname"></b><small id="cser"></small><span class="hint">Tap for clues</span></div>
+    <div class="face back"><h3>Suspect Has:</h3><ol id="clist"></ol></div>
+  </div></div>
+  <div class="pic" id="pic"></div>
+  <div class="row"><button class="btn ok" onclick="correct()">Correct ✓</button><button class="btn pri" onclick="nextChar()">Next ➜</button></div>
+  <button class="btn ghost" id="rb" onclick="randomPlayer()">🎲 Pick a random player</button>
+  <div class="row"><button class="btn ghost" onclick="show('score')">Scores</button><button class="btn ghost" onclick="show('setup')">Players</button></div>
+</section>
+
+<section class="s" id="score">
+  <h2>Scoreboard</h2>
+  <ul class="list" id="slist"></ul>
+  <button class="btn" onclick="show('play')">Back to game</button>
+  <button class="btn pri" onclick="newGame()">New game (reset scores)</button>
+</section>
+
+<section class="s" id="add">
+  <h2>Add a character</h2>
+  <p style="text-align:center;font-size:15px;margin:0 0 10px">Saved on this device only. To add a character for everyone, put the picture in the <b>images</b> folder and add it to <b>characters.json</b> on GitHub.</p>
+  <input id="an" placeholder="Character name" maxlength="24" style="margin-bottom:8px">
+  <input id="as" placeholder="Cartoon show (optional)" maxlength="30">
+  <label class="drop" id="dz">📷 Drag a picture here, paste it, or tap to choose<input id="af" type="file" accept="image/*" hidden></label>
+  <button class="btn ghost" onclick="pasteBtn()">📋 Paste picture</button>
+  <div class="pic" id="prev" style="display:none"></div>
+  <textarea id="ac" rows="4" placeholder="Clues, one per line (optional)"></textarea>
+  <button class="btn ok" id="sv" onclick="saveChar()">Save character</button>
+  <button class="btn ghost" id="cx" style="display:none" onclick="resetForm();$('amsg').textContent=''">Cancel edit</button>
+  <p id="amsg" style="text-align:center"></p>
+  <h3>All characters</h3>
+  <ul class="list" id="mine"></ul>
+  <button class="btn ghost" onclick="show('home')">Back</button>
+</section>
+
+</div>
+<script>
+let C=[];
+let chars=[...C],players=[],scores={},turn=0,deck=[],cur=null,uid=0,mode='order',bag=[];
+try{const sv=JSON.parse(localStorage.getItem('gw_custom')||'[]');if(Array.isArray(sv))chars.push(...sv)}catch(_){}
+const $=id=>document.getElementById(id);
+const e=s=>String(s).replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+/* ---- every character is a name, a picture and a list of clues ---- */
+function draw(c){return `<img src="${c.img}" alt="Character picture">`}
+function clues(c){return c.clues||[]}
+
+/* ---- screens ---- */
+function show(id){
+  document.querySelectorAll('.s').forEach(s=>s.classList.toggle('on',s.id===id));
+  window.scrollTo(0,0);
+  if(id==='home')mascots();if(id==='setup')renderP();if(id==='score')renderScores();if(id==='add')renderMine();
+}
+function mascots(){$('mas').innerHTML=chars.length?shuffle([...chars]).slice(0,4).map(draw).join(''):'<p style="text-align:center;width:100%">No characters yet. Tap “Add a character” to begin!</p>'}
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+/* ---- players ---- */
+function addP(){const n=$('pn').value.trim();if(!n||players.includes(n))return;players.push(n);scores[n]=0;bag=[];$('pn').value='';renderP()}
+$('pn').addEventListener('keydown',ev=>{if(ev.key==='Enter')addP()});
+function delP(i){delete scores[players[i]];players.splice(i,1);bag=[];turn=0;renderP()}
+function renderP(){
+  $('plist').innerHTML=players.map((p,i)=>`<li>${e(p)}<button class="x" onclick="delP(${i})" aria-label="Remove">✕</button></li>`).join('');
+  $('go').disabled=!players.length;paintMode();
+}
+
+/* ---- turn order: in order, or random (everyone goes once per round) ---- */
+function setMode(m){mode=m;bag=[];paintMode()}
+function paintMode(){
+  $('m_order').className='btn'+(mode==='order'?'':' ghost');
+  $('m_random').className='btn'+(mode==='random'?'':' ghost');
+  $('mnote').textContent=mode==='order'?'Players take turns in the order they were added.':'Each round, everyone gets one turn in a random order.';
+}
+function advanceTurn(){
+  if(mode==='order'){turn=(turn+1)%players.length;return}
+  if(!bag.length){bag=shuffle(players.map((_,i)=>i));if(players.length>1&&bag[bag.length-1]===turn)bag.unshift(bag.pop())}
+  turn=bag.pop();
+}
+function renderWho(){const p=players[turn];$('who').textContent=p+' · '+scores[p]+' pts';$('rb').style.display=players.length>1?'':'none'}
+function randomPlayer(){
+  if(players.length<2)return;
+  let i;do{i=Math.floor(Math.random()*players.length)}while(i===turn);
+  turn=i;bag=bag.filter(x=>x!==i);renderWho();
+}
+
+/* ---- gameplay ---- */
+function newGame(){
+  if(!players.length)return;
+  if(!chars.length){show('add');$('amsg').textContent='Add at least one character first.';return}
+  players.forEach(p=>scores[p]=0);turn=0;bag=[];deck=[];cur=null;if(mode==='random')advanceTurn();nextChar();show('play');
+}
+function nextChar(){
+  if(!chars.length){show('add');return}
+  if(!deck.length){deck=shuffle([...chars]);if(deck.length>1&&deck[deck.length-1]===cur)deck.unshift(deck.pop())}
+  cur=deck.pop();
+  renderWho();
+  $('cname').textContent=cur.n;$('cser').textContent=cur.s||'';
+  {const cl=clues(cur);$('clist').innerHTML=cl.length?cl.map(x=>`<li>${e(x)}</li>`).join(''):'<li style="list-style:none;margin-left:-22px">No clues this time. Just draw it!</li>'}
+  $('pic').innerHTML=draw(cur);
+  $('flip').classList.remove('f');
+}
+function correct(){scores[players[turn]]++;advanceTurn();nextChar()}
+function renderScores(){
+  const o=[...players].sort((a,b)=>scores[b]-scores[a]);
+  $('slist').innerHTML=o.map((p,i)=>`<li class="${p===players[turn]?'me':''}"><span>${i+1}. ${e(p)}</span><b>${scores[p]}</b></li>`).join('')||'<li>No players yet</li>';
+}
+
+/* ---- add a character: name + picture from your device + clues ---- */
+let newImg='';
+function loadImage(f){
+  if(!f||!f.type.startsWith('image/')){$('amsg').textContent='That wasn’t a picture. Try a PNG or JPG.';return}
+  const r=new FileReader();
+  r.onload=()=>{const im=new Image();
+    im.onerror=()=>{$('amsg').textContent='Couldn’t read that picture.'};
+    im.onload=()=>{
+      const sc=Math.min(1,400/Math.max(im.width,im.height)),cv=document.createElement('canvas');
+      cv.width=Math.round(im.width*sc);cv.height=Math.round(im.height*sc);
+      const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
+      newImg=cv.toDataURL('image/jpeg',.8);
+      $('prev').style.display='flex';$('prev').innerHTML=`<img src="${newImg}" alt="Preview">`;
+      $('amsg').textContent='Picture ready ✓';
+    };im.src=r.result};
+  r.readAsDataURL(f);
+}
+$('af').addEventListener('change',ev=>loadImage(ev.target.files[0]));
+const dz=$('dz');
+['dragenter','dragover'].forEach(n=>dz.addEventListener(n,ev=>{ev.preventDefault();dz.classList.add('over')}));
+['dragleave','drop'].forEach(n=>dz.addEventListener(n,ev=>{ev.preventDefault();dz.classList.remove('over')}));
+dz.addEventListener('drop',async ev=>{
+  let f=ev.dataTransfer.files[0];
+  if(!f){const u=ev.dataTransfer.getData('text/uri-list');if(u){try{const bl=await (await fetch(u)).blob();f=new File([bl],'dropped',{type:bl.type})}catch(_){}}}
+  if(f)loadImage(f);else $('amsg').textContent='Couldn’t read that image. Save it first and drop the file, or copy it and paste.';
+});
+document.addEventListener('paste',ev=>{
+  if(!$('add').classList.contains('on'))return;
+  const it=[...((ev.clipboardData&&ev.clipboardData.items)||[])].find(i=>i.type.startsWith('image/'));
+  if(it){ev.preventDefault();loadImage(it.getAsFile())}
+});
+async function pasteBtn(){
+  try{
+    for(const it of await navigator.clipboard.read()){
+      const ty=it.types.find(x=>x.startsWith('image/'));
+      if(ty){loadImage(new File([await it.getType(ty)],'pasted',{type:ty}));return}
+    }
+    $('amsg').textContent='No picture on the clipboard. Copy an image first.';
+  }catch(_){$('amsg').textContent='Couldn’t read the clipboard. Click the page and press Ctrl+V (Cmd+V on Mac) instead.'}
+}
+function custom(){try{return JSON.parse(localStorage.getItem('gw_custom')||'[]')}catch(_){return[]}}
+function store(a){try{localStorage.setItem('gw_custom',JSON.stringify(a));return true}catch(_){return false}}
+const norm=s=>s.toLowerCase().replace(/\s+/g,' ').trim();
+let editing=null;
+function resetForm(){
+  editing=null;['an','as','ac','af'].forEach(i=>$(i).value='');newImg='';
+  $('prev').style.display='none';$('sv').textContent='Save character';$('cx').style.display='none';
+}
+function saveChar(){
+  const n=$('an').value.trim().replace(/\s+/g,' ');
+  if(!n){$('an').focus();$('amsg').textContent='Please type a name.';return}
+  if(!newImg){$('amsg').textContent='Please choose a picture first.';return}
+  const self=editing===null?-1:C.length+editing;
+  if(chars.some((c,j)=>j!==self&&norm(c.n)===norm(n))){$('amsg').textContent='“'+n+'” is already in the game.';return}
+  const same=chars.find((c,j)=>j!==self&&c.img===newImg);
+  if(same){$('amsg').textContent='That picture is already used for “'+same.n+'”.';return}
+  const c={n,s:$('as').value.trim(),img:newImg,clues:$('ac').value.split('\n').map(x=>x.trim()).filter(Boolean)};
+  if(self<0)chars.push(c);else chars[self]=c;
+  deck=[];
+  const ok=store(chars.slice(C.length));
+  resetForm();renderMine();
+  $('amsg').textContent=ok?'Saved! ✓':'Kept for this game only (browser storage is full or blocked).';
+}
+function editChar(i){
+  const c=chars[C.length+i];editing=i;
+  $('an').value=c.n;$('as').value=c.s||'';$('ac').value=(c.clues||[]).join('\n');
+  newImg=c.img;$('prev').style.display='flex';$('prev').innerHTML=`<img src="${c.img}" alt="Preview">`;
+  $('sv').textContent='Save changes';$('cx').style.display='';
+  $('amsg').textContent='Editing “'+c.n+'”. Choose a new picture to replace it.';window.scrollTo(0,0);
+}
+function renderMine(){
+  const shared=C.map(c=>`<li>${e(c.n)}<small style="opacity:.6">shared · edit on GitHub</small></li>`);
+  const mine=chars.slice(C.length).map((c,i)=>`<li>${e(c.n)}<span><button class="x" onclick="editChar(${i})" aria-label="Edit">✏️</button><button class="x" onclick="delChar(${i})" aria-label="Remove">✕</button></span></li>`);
+  $('mine').innerHTML=[...shared,...mine].join('')||'<li>None yet</li>';
+}
+function delChar(i){
+  if(editing!==null)resetForm();
+  chars.splice(C.length+i,1);deck=[];store(chars.slice(C.length));renderMine();
+}
+/* ---- shared characters: loaded from characters.json in the GitHub repo ---- */
+fetch('characters.json').then(r=>r.json()).then(list=>{
+  const seen=new Set();
+  C=list.filter(x=>x&&x.name&&x.image&&!seen.has(norm(x.name))&&seen.add(norm(x.name)))
+    .map(x=>({n:x.name,s:x.show||'',img:x.image,clues:Array.isArray(x.clues)?x.clues:[]}));
+  chars=[...C,...custom().filter(x=>!seen.has(norm(x.n)))];deck=[];mascots();renderMine();
+}).catch(()=>{});
+mascots();
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+</script>
+</body>
+</html>
